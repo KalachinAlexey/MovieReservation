@@ -1,3 +1,5 @@
+import { getAccessToken } from './auth'
+
 const BASE_URL = import.meta.env.VITE_API_URL ?? ''
 
 export type Film = { id: number; title: string; description: string; genre: string }
@@ -7,9 +9,15 @@ export type Place = { id: number; filmEventId: number; row: number; column: numb
 export type Reservation = { id: number; username: string | null; totalPrice: number; status: 'RESERVED' | 'PAID' | 'CANCELLED' | null }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = await getAccessToken()
+  const headers = new Headers(options?.headers)
+
+  if (options?.body) headers.set('Content-Type', 'application/json')
+  if (token) headers.set('Authorization', `Bearer ${token}`)
+
   const response = await fetch(`${BASE_URL}${path}`, {
     ...options,
-    headers: options?.body ? { 'Content-Type': 'application/json', ...options.headers } : options?.headers,
+    headers,
   })
   const text = await response.text()
   if (!response.ok) {

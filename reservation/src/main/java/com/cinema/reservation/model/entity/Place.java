@@ -10,10 +10,11 @@ public class Place {
     private Long id;
 
     private Long filmEventId;
-    @Column(name = "ROW_NUMBER")
+    @Column(name = "row_number")
     private Long row;
-    @Column(name = "COLUMN_NUMBER")
+    @Column(name = "column_number")
     private Long column;
+    @Enumerated(EnumType.STRING)
     private PlaceStatus status;
     private Long reservationId;
     private Long price;

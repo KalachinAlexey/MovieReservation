@@ -33,8 +33,8 @@ public class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional
-    public Long bookPlaces(List<Place> places) {
-        Reservation reservation = reservationRepository.save(new Reservation());
+    public Long bookPlaces(List<Place> places, String username) {
+        Reservation reservation = reservationRepository.save(new Reservation(username));
         places.forEach(place -> {
                 Hall hall = hallRepository.findHallById(
                         eventRepository.findFilmEventById(place.getFilmEventId()).getHallId()
@@ -70,15 +70,15 @@ public class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional
-    public Reservation payReservation(Long reservationId) {
-        reservationRepository.payReservationById(reservationId);
+    public Reservation payReservation(Long reservationId, String username) {
+        reservationRepository.payReservationById(reservationId, username);
         return reservationRepository.findReservationById(reservationId);
     }
 
     @Override
     @Transactional
-    public Reservation cancelReservation(Long reservationId) {
-        reservationRepository.cancelReservationById(reservationId);
+    public Reservation cancelReservation(Long reservationId, String username) {
+        reservationRepository.cancelReservationById(reservationId, username);
         placeRepository.unbookPlacesByReservation(reservationId);
         return reservationRepository.findReservationById(reservationId);
     }

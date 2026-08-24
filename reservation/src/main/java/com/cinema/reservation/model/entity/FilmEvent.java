@@ -11,11 +11,11 @@ public class FilmEvent {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
-    @Column(name = "HALL_ID")
+    @Column(name = "hall_id")
     private long hallId;
-    @Column(name = "FILM_ID")
+    @Column(name = "film_id")
     private long filmId;
-    @Column(name = "DATE")
+    @Column(name = "date")
     private Timestamp date;
 
     public long getId() {

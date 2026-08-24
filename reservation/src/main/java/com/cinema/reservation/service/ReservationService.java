@@ -8,8 +8,8 @@ import java.util.List;
 
 public interface ReservationService {
     List<Place> findPlacesByEventId(long eventId);
-    Long bookPlaces(List<Place> places);
+    Long bookPlaces(List<Place> places, String username);
     void addPlacesForEvent(FilmEvent event);
-    Reservation payReservation(Long reservationId);
-    Reservation cancelReservation(Long reservationId);
+    Reservation payReservation(Long reservationId, String username);
+    Reservation cancelReservation(Long reservationId, String username);
 }

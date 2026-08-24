@@ -11,10 +11,17 @@ public class Reservation {
     private Long id;
     private String username;
     private Long totalPrice;
+    @Enumerated(EnumType.STRING)
     private ReservationStatus status;
 
 
     public Reservation() {
+        this.totalPrice = 0L;
+        this.status = ReservationStatus.RESERVED;
+    }
+
+    public Reservation(String username) {
+        this.username = username;
         this.totalPrice = 0L;
         this.status = ReservationStatus.RESERVED;
     }

@@ -4,6 +4,7 @@ import com.cinema.authorization.model.entity.UserAccount;
 import com.cinema.authorization.repository.UserAccountRepository;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -17,7 +18,8 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) {
-        UserAccount account = accountRepository.findByUsername(username);
+        UserAccount account = accountRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException(username));
         return User.withUsername(account.getUsername())
                 .password(account.getPassword())
                 .roles(account.getRole())

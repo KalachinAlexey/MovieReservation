@@ -1,5 +1,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import { User } from 'oidc-client-ts'
 import { api, Film, FilmEvent, Hall, Place, Reservation } from './lib/api'
+import { getCurrentUser, login, logout, register, userManager } from './lib/auth'
 
 type Notice = { kind: 'ok' | 'error'; text: string } | null
 
@@ -14,6 +16,7 @@ function App() {
   const [reservation, setReservation] = useState<Reservation | null>(null)
   const [notice, setNotice] = useState<Notice>(null)
   const [loading, setLoading] = useState(true)
+  const [authUser, setAuthUser] = useState<User | null>(null)
 
   const refresh = useCallback(async () => {
     try {
@@ -25,6 +28,19 @@ function App() {
 
   useEffect(() => { void refresh() }, [refresh])
   useEffect(() => {
+    const syncUser = () => { void getCurrentUser().then(setAuthUser) }
+    syncUser()
+    userManager.events.addUserLoaded(setAuthUser)
+    userManager.events.addUserUnloaded(syncUser)
+    userManager.events.addAccessTokenExpired(syncUser)
+
+    return () => {
+      userManager.events.removeUserLoaded(setAuthUser)
+      userManager.events.removeUserUnloaded(syncUser)
+      userManager.events.removeAccessTokenExpired(syncUser)
+    }
+  }, [])
+  useEffect(() => {
     if (eventId === null) return
     api.getPlaces(eventId).then((data) => { setPlaces(data); setSelected([]) })
       .catch((error) => setNotice({ kind: 'error', text: message(error) }))
@@ -34,26 +50,38 @@ function App() {
   const total = selectedPlaces.reduce((sum, place) => sum + place.price, 0)
 
   async function addFilm(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); const form = new FormData(event.currentTarget)
+    event.preventDefault(); const formElement = event.currentTarget; const form = new FormData(formElement)
     await run(async () => {
       await api.createFilm({ title: String(form.get('title')), description: String(form.get('description')), genre: String(form.get('genre')) })
-      event.currentTarget.reset(); await refresh(); return 'Фильм добавлен'
+      formElement.reset(); await refresh(); return 'Фильм добавлен'
+    })
+  }
+
+  async function createAccount(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    const username = String(form.get('username')).trim()
+    const password = String(form.get('password'))
+
+    await run(async () => {
+      await register(username, password)
+      return 'Пользователь создан'
     })
   }
 
   async function addHall(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); const form = new FormData(event.currentTarget)
+    event.preventDefault(); const formElement = event.currentTarget; const form = new FormData(formElement)
     await run(async () => {
       await api.createHall({ id: Number(form.get('id')), rows: Number(form.get('rows')), columns: Number(form.get('columns')) })
-      event.currentTarget.reset(); await refresh(); return 'Зал добавлен'
+      formElement.reset(); await refresh(); return 'Зал добавлен'
     })
   }
 
   async function addEvent(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); const form = new FormData(event.currentTarget)
+    event.preventDefault(); const formElement = event.currentTarget; const form = new FormData(formElement)
     await run(async () => {
       await api.createEvent({ filmId: Number(form.get('filmId')), hallId: Number(form.get('hallId')), date: new Date(String(form.get('date'))).toISOString() })
-      event.currentTarget.reset(); await refresh(); return 'Сеанс создан, места сгенерированы'
+      formElement.reset(); await refresh(); return 'Сеанс создан, места сгенерированы'
     })
   }
 
@@ -95,12 +123,29 @@ function App() {
     <header className="sticky top-0 z-20 border-b border-white/10 bg-ink/90 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
         <div><p className="text-xs font-semibold uppercase tracking-[.28em] text-amber-400">Cinema API Lab</p><h1 className="text-xl font-semibold">Панель тестирования бронирования</h1></div>
-        <button className="button-secondary" onClick={() => void refresh()}>Обновить данные</button>
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          {authUser
+            ? <><span className="user-badge">{authUser.profile.preferred_username ?? authUser.profile.sub}</span><button className="button-secondary" onClick={() => void logout()}>Выйти</button></>
+            : <button className="button-primary" onClick={() => void login()}>Войти</button>}
+          <button className="button-secondary" onClick={() => void refresh()}>Обновить данные</button>
+        </div>
       </div>
     </header>
 
     <main className="mx-auto max-w-7xl space-y-8 px-5 py-8">
       {notice && <div className={`notice ${notice.kind}`}>{notice.text}</div>}
+      {!authUser && <section className="panel auth-panel">
+        <div>
+          <span className="eyebrow">Аккаунт</span>
+          <h2 className="text-xl font-semibold">Создайте пользователя</h2>
+          <p className="mt-2 max-w-xl text-sm text-slate-400">После регистрации откроется защищённая страница входа сервиса авторизации.</p>
+        </div>
+        <form className="auth-form" onSubmit={createAccount}>
+          <input name="username" minLength={3} maxLength={100} autoComplete="username" placeholder="Логин" required />
+          <input name="password" type="password" minLength={8} maxLength={100} autoComplete="new-password" placeholder="Пароль (минимум 8 символов)" required />
+          <button className="button-primary">Зарегистрироваться</button>
+        </form>
+      </section>}
       <section className="grid gap-5 lg:grid-cols-3">
         <ResourceCard title="Фильмы" count={films.length} items={films.map((film) => `${film.id}. ${film.title}`)}>
           <form className="form" onSubmit={addFilm}><input name="title" placeholder="Название" required /><input name="genre" placeholder="Жанр" required /><textarea name="description" placeholder="Описание" required /><button className="button-primary">Добавить фильм</button></form>

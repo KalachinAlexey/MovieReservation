@@ -3,15 +3,23 @@ package com.cinema.authorization.model.entity;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "USERS")
+@Table(name = "USERS", uniqueConstraints =
+@UniqueConstraint(name = "uk_users_username", columnNames = "username"))
 public class UserAccount {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(nullable = false, length = 100)
     private String username;
+
+    @Column(nullable = false, length = 255)
     private String password;
+
+    @Column(nullable = false, length = 30)
     private String role = "USER";
-    private Boolean disabled;
+
+    @Column(nullable = false)
+    private boolean disabled = false;
 
     public Long getId() {
         return id;
@@ -45,11 +53,11 @@ public class UserAccount {
         this.role = role;
     }
 
-    public Boolean getDisabled() {
+    public boolean getDisabled() {
         return disabled;
     }
 
-    public void setDisabled(Boolean disabled) {
+    public void setDisabled(boolean disabled) {
         this.disabled = disabled;
     }
 }

@@ -2,6 +2,7 @@ package com.cinema.reservation.controller;
 
 import com.cinema.reservation.model.entity.Hall;
 import com.cinema.reservation.repository.HallRepository;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;

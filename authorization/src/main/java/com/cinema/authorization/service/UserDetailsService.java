@@ -1,7 +1,5 @@
 package com.cinema.authorization.service;
 
-import org.springframework.security.core.userdetails.UserDetails;
-
-public interface UserDetailsService {
-    UserDetails loadUserByUsername(String username);
+public interface UserDetailsService
+        extends org.springframework.security.core.userdetails.UserDetailsService {
 }

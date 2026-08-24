@@ -1,12 +1,12 @@
 package com.cinema.reservation.controller;
 
+import com.cinema.reservation.annotations.CurrentOwner;
 import com.cinema.reservation.model.entity.Place;
 import com.cinema.reservation.model.entity.Reservation;
-import com.cinema.reservation.repository.HallRepository;
 import com.cinema.reservation.repository.ReservationRepository;
 import com.cinema.reservation.service.ReservationService;
-import org.apache.coyote.Response;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,23 +26,28 @@ public class ReservationController {
         return reservationService.findPlacesByEventId(eventId);
     }
 
-    @PostMapping("/places") // transaction
-    ResponseEntity<Long> bookPlaces(@RequestBody List<Place> places) {
-        return ResponseEntity.ok(reservationService.bookPlaces(places));
+    @PostMapping("/places")
+    ResponseEntity<Long> bookPlaces(@RequestBody List<Place> places, @CurrentOwner String owner) {
+        return ResponseEntity.ok(reservationService.bookPlaces(places, owner));
+    }
+
+    @GetMapping("/reservations")
+    ResponseEntity<List<Reservation>> getUserReservations(@CurrentOwner String owner) {
+        return ResponseEntity.ok(reservationRepository.findReservationsByUsername(owner));
     }
 
     @GetMapping("/reservations/{reservationId}")
-    ResponseEntity<Reservation> getReservation(@PathVariable Long reservationId) {
-        return ResponseEntity.ok(reservationRepository.findReservationById(reservationId));
+    ResponseEntity<Reservation> getReservation(@PathVariable Long reservationId, @CurrentOwner String owner) {
+        return ResponseEntity.ok(reservationRepository.findReservationByIdAndUsername(reservationId, owner));
     }
 
     @PostMapping("/reservations/{reservationId}/pay")
-    ResponseEntity<Reservation> payReservation(@PathVariable Long reservationId) {
-        return ResponseEntity.ok(reservationService.payReservation(reservationId));
+    ResponseEntity<Reservation> payReservation(@PathVariable Long reservationId, @CurrentOwner String owner) {
+        return ResponseEntity.ok(reservationService.payReservation(reservationId, owner));
     }
 
     @PostMapping("/reservations/{reservationId}/cancell")
-    ResponseEntity<Reservation> cancelReservation(@PathVariable Long reservationId) {
-        return ResponseEntity.ok(reservationService.cancelReservation(reservationId));
+    ResponseEntity<Reservation> cancelReservation(@PathVariable Long reservationId, @CurrentOwner String owner) {
+        return ResponseEntity.ok(reservationService.cancelReservation(reservationId, owner));
     }
 }

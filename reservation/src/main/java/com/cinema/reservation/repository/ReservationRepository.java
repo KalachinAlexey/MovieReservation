@@ -7,6 +7,8 @@ import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 public interface ReservationRepository extends CrudRepository<Reservation, Long> {
     @Modifying
     @Query("""
@@ -20,17 +22,20 @@ public interface ReservationRepository extends CrudRepository<Reservation, Long>
     @Query("""
     update Reservation r
        set r.status = ReservationStatus.PAID
-     where r.id = :reservationId and r.status = ReservationStatus.RESERVED
+     where r.id = :reservationId and r.username = :username and r.status = ReservationStatus.RESERVED
     """)
-    void payReservationById(@Param("reservationId") Long reservationId);
+    void payReservationById(@Param("reservationId") Long reservationId, @Param("username") String username);
 
     @Modifying
     @Query("""
     update Reservation r
        set r.status = ReservationStatus.CANCELLED
-     where r.id = :reservationId and r.status = ReservationStatus.RESERVED
+     where r.id = :reservationId and r.username = :username and r.status = ReservationStatus.RESERVED
     """)
-    void cancelReservationById(@Param("reservationId") Long reservationId);
+    void cancelReservationById(@Param("reservationId") Long reservationId, @Param("username") String username);
 
     Reservation findReservationById(Long id);
+    Reservation findReservationByIdAndUsername(Long id, String username);
+
+    List<Reservation> findReservationsByUsername(String username);
 }
