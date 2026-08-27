@@ -24,7 +24,7 @@ public class HallController {
     }
 
     @PostMapping("/halls")
-    void postHall(@RequestBody Hall hall) {
+    void postHall(@RequestBody Hall hall) { // fix response
         hallRepository.save(hall);
     }
 }

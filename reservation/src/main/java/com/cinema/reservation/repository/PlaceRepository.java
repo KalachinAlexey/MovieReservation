@@ -5,6 +5,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -18,7 +20,7 @@ public interface PlaceRepository extends CrudRepository<Place, Long> {
        set p.status = PlaceStatus.BOOKED, p.reservationId = :reservationId
      where p.id = :placeId and p.status = PlaceStatus.EMPTY
     """)
-    void bookPlace(@Param("placeId") Long placeId, @Param("reservationId") Long reservationId);
+    int bookPlace(@Param("placeId") Long placeId, @Param("reservationId") Long reservationId);
 
     @Modifying
     @Query("""

@@ -47,7 +47,9 @@ public class ReservationServiceImpl implements ReservationService {
 //                        place.getColumn(),
 //                        place.getRow()
 //                );
-                placeRepository.bookPlace(place.getId(), reservation.getId());
+                if (placeRepository.bookPlace(place.getId(), reservation.getId()) == 0) {
+                    throw new RuntimeException("Place already booked");
+                }
                 reservationRepository.addReservationPrice(place.getPrice(), reservation.getId());
 
 //                    repositoryPlace.setReservationId(reservation.getId());

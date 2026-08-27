@@ -10,7 +10,7 @@ public class Reservation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String username;
-    private Long totalPrice;
+    private Long totalPrice = 0L;
     @Enumerated(EnumType.STRING)
     private ReservationStatus status;
 
