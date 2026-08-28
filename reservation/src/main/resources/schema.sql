@@ -20,6 +20,13 @@ CREATE TABLE IF NOT EXISTS reservation.events (
     date TIMESTAMP NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS reservation.reservations (
+    id BIGSERIAL PRIMARY KEY,
+    username VARCHAR(50),
+    total_price BIGINT NOT NULL,
+    status VARCHAR(10) NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS reservation.places (
     id BIGSERIAL PRIMARY KEY,
     film_event_id BIGINT NOT NULL REFERENCES reservation.events(id) ON DELETE CASCADE,
@@ -28,11 +35,4 @@ CREATE TABLE IF NOT EXISTS reservation.places (
     status VARCHAR(10) NOT NULL,
     reservation_id BIGINT REFERENCES reservation.reservations(id),
     price BIGINT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS reservation.reservations (
-    id BIGSERIAL PRIMARY KEY,
-    username VARCHAR(50),
-    total_price BIGINT NOT NULL,
-    status VARCHAR(10) NOT NULL
 );

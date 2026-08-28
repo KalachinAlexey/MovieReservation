@@ -4,6 +4,7 @@ import com.cinema.reservation.model.entity.Film;
 import com.cinema.reservation.model.entity.FilmEvent;
 import com.cinema.reservation.repository.EventRepository;
 import com.cinema.reservation.service.ReservationService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,8 +18,8 @@ import java.util.List;
 
 @RestController
 public class EventController {
-    private EventRepository eventRepository;
-    private ReservationService reservationService;
+    private final EventRepository eventRepository;
+    private final ReservationService reservationService;
 
     public EventController(EventRepository eventRepository, ReservationService reservationService) {
         this.eventRepository = eventRepository;
@@ -26,14 +27,15 @@ public class EventController {
     }
 
     @GetMapping("/events")
-    List<FilmEvent> getAllEvents() {
-        return eventRepository.findAll();
+    ResponseEntity<List<FilmEvent>> getAllEvents() {
+        return ResponseEntity.ok(eventRepository.findAll());
     }
 
     @PostMapping("/events")
     @Transactional
-    void postEvent(@RequestBody FilmEvent event) {
+    ResponseEntity<Void> postEvent(@RequestBody FilmEvent event) {
         eventRepository.save(event);
         reservationService.addPlacesForEvent(event);
+        return ResponseEntity.ok().build();
     }
 }

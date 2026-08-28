@@ -9,10 +9,19 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface PlaceRepository extends CrudRepository<Place, Long> {
+    @Query("""
+        select p from Place p
+            where p.id = :id and 
+                  p.filmEventId = :filmEventId and
+                  p.row = :row and
+                  p.column = :column  
+    """)
+    Optional<Place> findValidPlace(@Param("id") Long id, @Param("filmEventId") Long filmEventId,
+                                   @Param("row") Long row, @Param("column") Long column);
     List<Place> findPlacesByFilmEventId(Long eventId);
-    Place findPlacesByFilmEventIdAndColumnAndRow(Long eventId, Long column, Long row);
 
     @Modifying
     @Query("""

@@ -1,10 +1,18 @@
 package com.cinema.reservation.service;
 
+import com.cinema.reservation.errors.*;
+import com.cinema.reservation.errors.notfound.EventNotFound;
+import com.cinema.reservation.errors.notfound.HallNotFound;
+import com.cinema.reservation.errors.notfound.ReservationNotFound;
+import com.cinema.reservation.kafka.NotificationProducer;
+import com.cinema.reservation.model.dto.PlaceDto;
 import com.cinema.reservation.model.entity.*;
 import com.cinema.reservation.repository.EventRepository;
 import com.cinema.reservation.repository.HallRepository;
 import com.cinema.reservation.repository.PlaceRepository;
 import com.cinema.reservation.repository.ReservationRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,18 +20,22 @@ import java.util.List;
 
 @Component
 public class ReservationServiceImpl implements ReservationService {
-    private PlaceRepository placeRepository;
+    private static final Logger LOGGER = LoggerFactory.getLogger(ReservationServiceImpl.class);
+
+    private final PlaceRepository placeRepository;
     private final HallRepository hallRepository;
     private final EventRepository eventRepository;
     private final ReservationRepository reservationRepository;
+    private final NotificationProducer notificationProducer;
 
     public ReservationServiceImpl(PlaceRepository placeRepository,
                                   HallRepository hallRepository,
-                                  EventRepository eventRepository, ReservationRepository reservationRepository) {
+                                  EventRepository eventRepository, ReservationRepository reservationRepository, NotificationProducer notificationProducer) {
         this.placeRepository = placeRepository;
         this.hallRepository = hallRepository;
         this.eventRepository = eventRepository;
         this.reservationRepository = reservationRepository;
+        this.notificationProducer = notificationProducer;
     }
 
     @Override
@@ -33,36 +45,41 @@ public class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional
-    public Long bookPlaces(List<Place> places, String username) {
+    public Reservation bookPlaces(List<PlaceDto> places, String username) {
         Reservation reservation = reservationRepository.save(new Reservation(username));
-        places.forEach(place -> {
-                Hall hall = hallRepository.findHallById(
-                        eventRepository.findFilmEventById(place.getFilmEventId()).getHallId()
-                );
-                if (!validatePlace(place, hall)) {
-                    throw new RuntimeException();
-                }
-//                Place repositoryPlace = placeRepository.findPlacesByFilmEventIdAndColumnAndRow(
-//                        place.getFilmEventId(),
-//                        place.getColumn(),
-//                        place.getRow()
-//                );
-                if (placeRepository.bookPlace(place.getId(), reservation.getId()) == 0) {
-                    throw new RuntimeException("Place already booked");
-                }
-                reservationRepository.addReservationPrice(place.getPrice(), reservation.getId());
 
-//                    repositoryPlace.setReservationId(reservation.getId());
-//                    repositoryPlace.setStatus(PlaceStatus.BOOKED);
-//                    placeRepository.save(repositoryPlace);
+        places.forEach(placeDto -> {
+                Place place = placeRepository.findValidPlace(
+                        placeDto.id(), placeDto.filmEventId(),
+                        placeDto.row(), placeDto.column())
+                    .orElseThrow(() -> new PlaceValidationException(placeDto.id()));
+
+                Long hallId = eventRepository.findFilmEventById(place.getFilmEventId())
+                        .orElseThrow(() -> new EventNotFound(place.getFilmEventId()))
+                        .getHallId();
+                Hall hall = hallRepository.findHallById(hallId)
+                        .orElseThrow(() -> new HallNotFound(hallId));
+
+                if (!validatePlace(place, hall)) {
+                    throw new PlaceValidationException(place.getId());
+                }
+                if (placeRepository.bookPlace(place.getId(), reservation.getId()) == 0) {
+                    throw new PlaceAlreadyBookedException(place.getId());
+                }
+
+                reservation.setTotalPrice(reservation.getTotalPrice() + place.getPrice());
+                reservationRepository.addReservationPrice(place.getPrice(), reservation.getId());
         });
-        return reservation.getId();
+        LOGGER.info("{}", reservation.getTotalPrice());
+        notificationProducer.send(reservation);
+        return reservation;
     }
 
     @Override
     @Transactional
     public void addPlacesForEvent(FilmEvent event) {
-        Hall hall = hallRepository.findHallById(event.getHallId());
+        Hall hall = hallRepository.findHallById(event.getHallId())
+                .orElseThrow(() -> new HallNotFound(event.getHallId()));
         for (int i = 1; i <= hall.getRows(); i++) {
             for (int j = 1; j <= hall.getColumns(); j++) {
                 placeRepository.save(new Place(event.getId(), i, j));
@@ -73,16 +90,28 @@ public class ReservationServiceImpl implements ReservationService {
     @Override
     @Transactional
     public Reservation payReservation(Long reservationId, String username) {
-        reservationRepository.payReservationById(reservationId, username);
-        return reservationRepository.findReservationById(reservationId);
+        int updated = reservationRepository.payReservationById(reservationId, username);
+        if (updated == 0) {
+            throw new PayReservationException(reservationId);
+        }
+        Reservation reservation = reservationRepository.findReservationById(reservationId)
+                .orElseThrow(() -> new ReservationNotFound(reservationId));
+        notificationProducer.send(reservation);
+        return reservation;
     }
 
     @Override
     @Transactional
     public Reservation cancelReservation(Long reservationId, String username) {
-        reservationRepository.cancelReservationById(reservationId, username);
+        int updated = reservationRepository.cancelReservationById(reservationId, username);
+        if (updated == 0) {
+            throw new CancelReservationException(reservationId);
+        }
         placeRepository.unbookPlacesByReservation(reservationId);
-        return reservationRepository.findReservationById(reservationId);
+        Reservation reservation = reservationRepository.findReservationById(reservationId)
+                .orElseThrow(() -> new ReservationNotFound(reservationId));
+        notificationProducer.send(reservation);
+        return reservation;
     }
 
     private boolean validatePlace(Place place, Hall hall) {

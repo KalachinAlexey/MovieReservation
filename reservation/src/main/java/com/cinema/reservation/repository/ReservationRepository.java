@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ReservationRepository extends CrudRepository<Reservation, Long> {
     @Modifying
@@ -24,7 +25,7 @@ public interface ReservationRepository extends CrudRepository<Reservation, Long>
        set r.status = ReservationStatus.PAID
      where r.id = :reservationId and r.username = :username and r.status = ReservationStatus.RESERVED
     """)
-    void payReservationById(@Param("reservationId") Long reservationId, @Param("username") String username);
+    int payReservationById(@Param("reservationId") Long reservationId, @Param("username") String username);
 
     @Modifying
     @Query("""
@@ -32,10 +33,10 @@ public interface ReservationRepository extends CrudRepository<Reservation, Long>
        set r.status = ReservationStatus.CANCELLED
      where r.id = :reservationId and r.username = :username and r.status = ReservationStatus.RESERVED
     """)
-    void cancelReservationById(@Param("reservationId") Long reservationId, @Param("username") String username);
+    int cancelReservationById(@Param("reservationId") Long reservationId, @Param("username") String username);
 
-    Reservation findReservationById(Long id);
-    Reservation findReservationByIdAndUsername(Long id, String username);
+    Optional<Reservation> findReservationById(Long id);
+    Optional<Reservation> findReservationByIdAndUsername(Long id, String username);
 
     List<Reservation> findReservationsByUsername(String username);
 }

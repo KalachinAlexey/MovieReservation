@@ -1,12 +1,13 @@
 package com.cinema.reservation.controller;
 
 import com.cinema.reservation.annotations.CurrentOwner;
+import com.cinema.reservation.errors.notfound.ReservationNotFound;
+import com.cinema.reservation.model.dto.PlaceDto;
 import com.cinema.reservation.model.entity.Place;
 import com.cinema.reservation.model.entity.Reservation;
 import com.cinema.reservation.repository.ReservationRepository;
 import com.cinema.reservation.service.ReservationService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,12 +23,12 @@ public class ReservationController {
     }
 
     @GetMapping("/places/{eventId}")
-    List<Place> getEventPlaces(@PathVariable Long eventId) {
-        return reservationService.findPlacesByEventId(eventId);
+    ResponseEntity<List<Place>> getEventPlaces(@PathVariable Long eventId) {
+        return ResponseEntity.ok(reservationService.findPlacesByEventId(eventId));
     }
 
     @PostMapping("/places")
-    ResponseEntity<Long> bookPlaces(@RequestBody List<Place> places, @CurrentOwner String owner) {
+    ResponseEntity<Reservation> bookPlaces(@RequestBody List<PlaceDto> places, @CurrentOwner String owner) {
         return ResponseEntity.ok(reservationService.bookPlaces(places, owner));
     }
 
@@ -38,7 +39,8 @@ public class ReservationController {
 
     @GetMapping("/reservations/{reservationId}")
     ResponseEntity<Reservation> getReservation(@PathVariable Long reservationId, @CurrentOwner String owner) {
-        return ResponseEntity.ok(reservationRepository.findReservationByIdAndUsername(reservationId, owner));
+        return ResponseEntity.ok(reservationRepository.findReservationByIdAndUsername(reservationId, owner)
+                .orElseThrow(() -> new ReservationNotFound(reservationId)));
     }
 
     @PostMapping("/reservations/{reservationId}/pay")
